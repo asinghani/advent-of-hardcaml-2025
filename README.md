@@ -24,5 +24,12 @@ toolchain.
 
 [Problem Link](https://adventofcode.com/2025/day/1)
 
-Not started yet
+[Hardcaml solution, part 1 + part 2](day01/src/day01_design.ml)
 
+This implementation takes the simplest / slightly silly approach of simulating
+every single tick that the combination lock moves through, and incrementing a
+counter whenever it hits zero. This is very area-efficient (requires only a
+couple of counters and a small state-machine) but not very time-efficient.
+
+I might go back and implement the more efficient approach (using modular
+arithmetic) at some point in the future.

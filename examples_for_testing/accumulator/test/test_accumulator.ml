@@ -2,7 +2,7 @@ open! Core
 
 let%expect_test "test accumulator" =
   Advent_of_fpga_infra.Test_harness.run_combined_exn
-    ~debug:false
+    ~debug:true
     ~save_waves:false
     ~num_cycles:100
     ~input_filename:"test_accumulator.txt"

@@ -10,6 +10,7 @@
   hardcaml_circuits
   hardcaml_test_harness
   tiny_serial
+  day01
   blinky
   accumulator)
  (inline_tests)

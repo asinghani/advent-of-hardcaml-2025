@@ -95,8 +95,10 @@ module Make_harness (Design : Design.S) (Parser : Parser.S) = struct
 
   let run_test ?(debug = false) ?(save_waves = false) ~num_cycles ~input_filename () =
     let input = Advent_of_fpga_inputs_lib.Inputs.get_input_file input_filename in
-    print_endline "=== Sample Input ===";
-    print_endline input;
+    if debug
+    then (
+      print_endline "=== Sample Input ===";
+      print_endline input);
     let symbols = Parser.parse input in
     let uart_bytes = Control_codes_protocol.For_driver.encode symbols |> Bytes.to_list in
     let waves_config =

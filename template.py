@@ -43,7 +43,7 @@ let design_config =
   {{ Design_config.default with clock_freq; ulx3s_extra_synth_args = [ "-noflatten" ] }}
 ;;
 
-let hierarchical
+let create
       scope
       ({{ clock; clear; uart_rx_data; uart_rx_control; uart_rx_overflow; uart_tx_ready }} :
         _ I.t)
@@ -69,6 +69,11 @@ let hierarchical
       {{ clock; clear; part1 = accumulator; part2 = zero 60; done_; uart_tx_ready }}
   in
   {{ board_leds = done_ @: counter; uart_tx; uart_rx_ready = vdd }}
+;;
+
+let hierarchical scope i =
+  let module Scoped = Hierarchy.In_scope (I) (O) in
+  Scoped.hierarchical ~here:[%here] ~scope create i
 ;;
 """,
         
