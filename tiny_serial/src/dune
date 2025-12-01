@@ -1,0 +1,5 @@
+(library
+ (name tiny_serial)
+ (libraries async async_unix core core_unix)
+ (preprocess
+  (pps ppx_jane)))

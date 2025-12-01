@@ -1,0 +1,18 @@
+(library
+ (name advent_of_fpga_infra)
+ (libraries
+  advent_of_fpga_kernel
+  advent_of_fpga_inputs_lib
+  core
+  core_unix
+  core_unix.filename_unix
+  hardcaml
+  hardcaml_circuits
+  hardcaml_test_harness
+  tiny_serial
+  blinky
+  accumulator)
+ (inline_tests)
+ (preprocessor_deps constraints.lpf)
+ (preprocess
+  (pps ppx_jane ppx_hardcaml ppx_embed_file)))

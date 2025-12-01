@@ -1,0 +1,6 @@
+(executables
+ (names build_ulx3s control)
+ (promote)
+ (libraries core core_unix.command_unix advent_of_fpga_infra)
+ (preprocess
+  (pps ppx_jane)))

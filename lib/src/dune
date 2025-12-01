@@ -1,0 +1,5 @@
+(library
+ (name advent_of_fpga_utils)
+ (libraries advent_of_fpga_kernel core hardcaml hardcaml_circuits)
+ (preprocess
+  (pps ppx_jane ppx_hardcaml)))
