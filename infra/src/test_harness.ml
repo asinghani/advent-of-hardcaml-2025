@@ -112,7 +112,8 @@ module Make_harness (Design : Design.S) (Parser : Parser.S) = struct
       ~random_initial_state:`All
       ~create:Dut.create
       (fun sim ->
-         let t = { sim; recv_buffer = Queue.create () } in
+         let recv_buffer = Queue.create () in
+         let t = { sim; recv_buffer } in
          let open Bits in
          let i = Cyclesim.inputs sim in
          i.uart_rx.valid := gnd;
@@ -121,7 +122,15 @@ module Make_harness (Design : Design.S) (Parser : Parser.S) = struct
          i.clear := gnd;
          cycle ~n:4 t;
          List.iter uart_bytes ~f:(write_byte t);
-         cycle ~n:num_cycles t;
+         With_return.with_return (fun return ->
+           for _ = 1 to num_cycles do
+             cycle t;
+             match Queue.peek_back recv_buffer with
+             | Some '\x04' ->
+               (* End of transmission *)
+               return.return ()
+             | _ -> ()
+           done);
          print_endline "=== Output ===";
          dump_uart_buffer t)
   ;;
