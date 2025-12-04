@@ -89,7 +89,13 @@ let create
             ; when_ end_of_input [ sm.set_next Flush_pipeline ]
             ] )
         ; ( Iterate_over_range
-          , [ Array.map2_exn sequence_lens results ~f:(fun sequence_len result ->
+          , [ (* Generate separate logic for part 1 and part 2 *)
+              Array.map2_exn sequence_lens results ~f:(fun sequence_len result ->
+                (* Generate a chained check for each digit that could be
+                   updated in the result. This seems inefficient but is
+                   actually only a few layers of logic (all of the comparisons
+                   happen in parallel, followed by effectively a priority
+                   encoder). Then update the relevant digits in the result. *)
                 Array.init sequence_len ~f:Fn.id
                 |> Array.fold_right
                      ~f:(fun i acc ->
@@ -119,21 +125,23 @@ let create
             ; Array.concat_map results ~f:(Array.map ~f:(fun x -> x <--. 0)) |> proc_arr
             ] )
         ; ( Flush_pipeline
-          , [ Fsm_utils.after_n_clocks ~clock ~clear ~n:10 [ sm.set_next Done ] ] )
+          , [ (* Kind of hacky but good enough *)
+              Fsm_utils.after_n_clocks ~clock ~clear ~n:10 [ sm.set_next Done ]
+            ] )
         ; Done, []
         ]
     ];
-  let%hw_array.With_valid.Of_signal results_binary =
-    Array.map results ~f:(fun result ->
+  (* Convert back to binary and add up the results *)
+  let%hw_array accumulators =
+    results
+    |> Array.map ~f:(fun result ->
       Bcd_utils.bcd_to_binary
         ~clock
         ~clear
         { valid = result_valid.value
         ; value = result |> Array.map ~f:Variable.value |> Array.to_list |> concat_msb
         })
-  in
-  let%hw_array accumulators =
-    Array.map results_binary ~f:(fun { value; valid } ->
+    |> Array.map ~f:(fun { value; valid } ->
       reg_fb spec ~width:60 ~enable:valid ~f:(fun x -> x +: uresize ~width:60 value))
   in
   let done_ = sm.is Done in

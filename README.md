@@ -20,6 +20,28 @@ toolchain.
 
 ## Solutions
 
+### Day 3, Part 1 + Part 2
+
+[Hardcaml solution](day03/src/day03_design.ml) // [Problem Link](https://adventofcode.com/2025/day/3)
+
+The solution for this problem is to iterate and greedily take the largest value
+for each digit (from the left), while enforcing that there are at least enough
+digits left to construct the rest of the resultant number. Unfortunately, in
+order to do this without hardcoding the line length, it has to do two passes
+over each line, once to store and count the length of the line and a second
+time to actually process it.
+
+At each step in the iteration, it checks (in parallel for each of the result
+digits) whether taking the current digit is both possible (enough remaining
+digits) and is larger than the corresponding current digit in the result. It
+then prioritizes the most-significant digit that it is able to take, clearing
+out any later ones. Due to being able to do most of the logic in parallel
+across all of the possible digits, this scales fairly well and doesn't require
+much pipelining.
+
+The whole thing is also generated twice, for sequence lengths of 2 and 12,
+corresponding to parts 1 and 2.
+
 ### Day 2, Part 1 + Part 2
 
 [Hardcaml solution](day02/src/day02_design.ml) // [Problem Link](https://adventofcode.com/2025/day/2)
@@ -39,7 +61,7 @@ reducing them using a tree and adding up all of the detected mismatched IDs.
 
 [Hardcaml solution](day01/src/day01_design.ml) // [Problem Link](https://adventofcode.com/2025/day/1)
 
-This implementation takes the simplest / slightly silly approach of simulating
+This implementation takes the simplest, slightly silly approach of simulating
 every single tick that the combination lock moves through, and incrementing a
 counter whenever it hits zero. This is very area-efficient (requires only a
 couple of counters and a small state-machine) but not very time-efficient.
