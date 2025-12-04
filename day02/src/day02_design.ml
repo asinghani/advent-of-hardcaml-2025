@@ -7,8 +7,8 @@ open Signal
 
 let clock_freq = Clock_freq.Clock_25mhz
 
-let design_config =
-  { Design_config.default with clock_freq; ulx3s_extra_synth_args = [ "-noflatten" ] }
+let design_config : Design_config.t =
+  { clock_freq; ulx3s_extra_synth_args = [ "-noflatten" ]; uart_fifo_depth = 1024 }
 ;;
 
 let max_num_digits = 10
@@ -49,26 +49,33 @@ module Check_if_id_invalid = struct
       hi ==:. 0 &: (sel_top ~width:4 lo <>:. 0))
   ;;
 
+  let list_init_range_inclusive ~lo ~hi ~f =
+    List.init (hi - lo + 1) ~f:(fun x -> f (x + lo))
+  ;;
+
   let create _scope ({ clock; clear; id_bcd } : _ I.t) : _ O.t =
     let spec = Reg_spec.create ~clock ~clear () in
-    let invalid_id ~allow_any_number_of_parts =
-      List.range ~start:`inclusive ~stop:`inclusive 2 max_num_digits
-      |> List.map ~f:(fun length ->
+    let invalid_id ~is_part2 =
+      list_init_range_inclusive ~lo:2 ~hi:max_num_digits ~f:(fun length ->
         let l =
-          List.range ~start:`inclusive ~stop:`inclusive 1 (length - 1)
-          |> List.map ~f:(fun div ->
+          list_init_range_inclusive ~lo:1 ~hi:(length - 1) ~f:(fun div ->
             (* TODO: this is kind of spaghetti but it does work, probably can be cleaned up though *)
-            if
-              length % div = 0
-              && ((length % 2 = 0 && div = length / 2) || allow_any_number_of_parts)
+            let divides_evenly = length % div = 0 in
+            let is_divided_in_half = length % 2 = 0 && div = length / 2 in
+            if divides_evenly && (is_divided_in_half || is_part2)
             then (
               let matches_length = bcd_is_length ~n:length id_bcd.value in
-              let lower_part = sel_bottom ~width:(4 * length) id_bcd.value in
-              let split = split_lsb ~exact:true ~part_width:(4 * div) lower_part in
+              let split =
+                id_bcd.value
+                |> sel_bottom ~width:(4 * length)
+                |> split_lsb ~exact:true ~part_width:(4 * div)
+              in
               let first, rest = List.split_n split 1 in
               let first = List.hd_exn first in
+              (* Check all of the split segments are equivalent *)
               let split_all_equal =
-                List.map rest ~f:(fun x -> x ==: first) |> reduce ~f:( &: )
+                List.map rest ~f:(fun x -> x ==: first)
+                |> tree ~arity:4 ~f:(reduce ~f:( &: ))
               in
               Some
                 { With_valid.value = id_bcd.value
@@ -81,10 +88,10 @@ module Check_if_id_invalid = struct
       |> List.filter_opt
       |> priority_select
     in
-    { invalid_id_for_part1_bcd = invalid_id ~allow_any_number_of_parts:false
-    ; invalid_id_for_part2_bcd = invalid_id ~allow_any_number_of_parts:true
+    { invalid_id_for_part1_bcd = invalid_id ~is_part2:false
+    ; invalid_id_for_part2_bcd = invalid_id ~is_part2:true
     }
-    |> O.Of_signal.pipeline ~n:3 spec
+    |> O.Of_signal.pipeline ~n:1 spec
   ;;
 end
 

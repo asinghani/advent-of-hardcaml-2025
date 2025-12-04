@@ -20,6 +20,21 @@ toolchain.
 
 ## Solutions
 
+### Day 2, Part 1 + Part 2
+
+[Hardcaml solution](day02/src/day02_design.ml) // [Problem Link](https://adventofcode.com/2025/day/2)
+
+I was quite satisfied with how this implementation turned out. It accepts the
+input exactly as-is (in ASCII), and uses a small state-machine to shift in the
+lower bound, then the upper bound (after it sees a dash); storing them in BCD
+(binary-coded decimal). 
+
+It then increments the lower bound until it reaches the upper bound (using a
+simple BCD adder), each cycle feeding the counter into a pipelined checker
+which compares each possible invalid ID format (using nested lists to generate
+a parallel check for each possible length and number of repetitions), before
+reducing them using a tree and adding up all of the detected mismatched IDs.
+
 ### Day 1, Part 1 + Part 2
 
 [Hardcaml solution](day01/src/day01_design.ml) // [Problem Link](https://adventofcode.com/2025/day/1)
