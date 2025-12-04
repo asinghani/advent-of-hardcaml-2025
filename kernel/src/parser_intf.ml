@@ -7,6 +7,7 @@ module Symbol = struct
   type t =
     | Data_byte of char
     | Control_byte of char
+  [@@deriving sexp]
 end
 
 module type S = sig

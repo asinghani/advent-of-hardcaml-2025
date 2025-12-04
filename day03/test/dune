@@ -1,0 +1,11 @@
+(library
+ (name day03_test)
+ (libraries
+  day03
+  advent_of_fpga_kernel
+  advent_of_fpga_infra
+  core
+  hardcaml)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane)))

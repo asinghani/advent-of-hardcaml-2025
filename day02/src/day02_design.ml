@@ -112,37 +112,6 @@ let bcd_incr (x : Signal.t) : Signal.t =
   x |> split_lsb ~exact:true ~part_width:4 |> helper ~carry:vdd |> concat_lsb
 ;;
 
-let bcd_to_binary ~clock ~clear (x : _ With_valid.t) =
-  assert (width x.value % 4 = 0);
-  let spec = Reg_spec.create ~clock ~clear () in
-  let mul10 a =
-    (* 8a + 2a *)
-    Unsigned.((a @: zero 3) +: (a @: zero 1))
-  in
-  let rec helper x =
-    if width x = 4
-    then x, 0
-    else (
-      let xs, x = split_in_half_lsb ~lsbs:4 x in
-      let xs_as_binary, xs_latency = helper xs in
-      let result = Unsigned.(mul10 xs_as_binary +: pipeline spec ~n:xs_latency x) in
-      reg spec result, xs_latency + 1)
-  in
-  let result, latency = helper x.value in
-  { With_valid.value = result; valid = pipeline spec ~n:latency x.valid }
-;;
-
-let ascii_to_bcd x =
-  assert (width x = 8);
-  (* Since ASCII 0 is 0x30, we can just select the lower bits to convert *)
-  sel_bottom ~width:4 x
-;;
-
-let is_ascii_number x =
-  assert (width x = 8);
-  x >=:. Char.to_int '0' &: (x <=:. Char.to_int '9')
-;;
-
 (* Compare a signal with a char *)
 let ( ==:& ) a b = a ==:. Char.to_int b
 
@@ -190,11 +159,11 @@ let create
                       sm.set_next Read_upper_bound
                     ]
                   @@ elif
-                       (is_ascii_number byte_in.value)
+                       (Bcd_utils.is_ascii_number byte_in.value)
                        [ (* Shift in the new byte *)
                          current_count
                          <-- drop_top ~width:4 current_count.value
-                             @: ascii_to_bcd byte_in.value
+                             @: Bcd_utils.ascii_to_bcd byte_in.value
                        ]
                   @@ [ (* Ignore invalid byte *) ]
                 ]
@@ -209,11 +178,11 @@ let create
                       sm.set_next Iterate_over_range
                     ]
                   @@ elif
-                       (is_ascii_number byte_in.value)
+                       (Bcd_utils.is_ascii_number byte_in.value)
                        [ (* Shift in the new byte *)
                          upper_bound
                          <-- drop_top ~width:4 upper_bound.value
-                             @: ascii_to_bcd byte_in.value
+                             @: Bcd_utils.ascii_to_bcd byte_in.value
                        ]
                   @@ [ (* Ignore invalid byte *) ]
                 ]
@@ -247,14 +216,14 @@ let create
     Check_if_id_invalid.create scope { clock; clear; id_bcd = current_count }
   in
   let%hw.With_valid.Of_signal part1_id_is_invalid_binary =
-    bcd_to_binary ~clock ~clear invalid_id_for_part1_bcd
+    Bcd_utils.bcd_to_binary ~clock ~clear invalid_id_for_part1_bcd
   in
   let%hw part1_accumulator =
     reg_fb spec ~width:60 ~enable:part1_id_is_invalid_binary.valid ~f:(fun x ->
       x +: uresize ~width:60 part1_id_is_invalid_binary.value)
   in
   let%hw.With_valid.Of_signal part2_id_is_invalid_binary =
-    bcd_to_binary ~clock ~clear invalid_id_for_part2_bcd
+    Bcd_utils.bcd_to_binary ~clock ~clear invalid_id_for_part2_bcd
   in
   let%hw part2_accumulator =
     reg_fb spec ~width:60 ~enable:part2_id_is_invalid_binary.valid ~f:(fun x ->

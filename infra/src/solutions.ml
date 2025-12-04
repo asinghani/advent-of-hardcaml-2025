@@ -6,5 +6,6 @@ let solutions =
   ; (module Accumulator : Solution.S)
   ; (module Day01 : Solution.S)
   ; (module Day02 : Solution.S)
+  ; (module Day03 : Solution.S)
   ]
 ;;
