@@ -10,6 +10,7 @@ let max_num_rows = 4
 let result_bits = 48
 let col_bits = address_bits_for max_num_cols
 let row_bits = address_bits_for max_num_rows
+let char_idx_bits = num_bits_to_represent ((max_num_digits + 1) * max_num_cols)
 
 module Bcd_number = Bcd.Make (struct
     let num_digits = max_num_digits
@@ -17,15 +18,19 @@ module Bcd_number = Bcd.Make (struct
 
 (* Entry in RAM representing a single column of the input *)
 module Column_entry = struct
-  type 'a t = { numbers : 'a Bcd_number.With_valid.t list [@length max_num_rows] }
+  type 'a t =
+    { numbers : 'a Bcd_number.With_valid.t list [@length max_num_rows]
+    ; offsets : 'a list [@bits char_idx_bits] [@length max_num_rows]
+    }
   [@@deriving hardcaml]
 
-  let insert t ~idx ~entry =
+  let insert t ~idx ~entry ~offset =
     { numbers =
         List.mapi t.numbers ~f:(fun i x ->
           Bcd_number.With_valid.Of_signal.(
             (* Zero out "future" rows, since they may or may not ever be used  *)
             mux2 (idx <:. i) (zero ()) @@ mux2 (idx ==:. i) entry @@ x))
+    ; offsets = List.mapi t.offsets ~f:(fun i x -> mux2 (idx ==:. i) offset @@ x)
     }
   ;;
 end

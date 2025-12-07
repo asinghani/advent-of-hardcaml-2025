@@ -38,7 +38,7 @@ struct
     t.digits
     |> List.mapi ~f:(fun i d ->
       { With_valid.valid = any_bit_set d
-      ; value = of_unsigned_int ~width:num_digits_bits i
+      ; value = of_unsigned_int ~width:num_digits_bits (i + 1)
       })
     |> List.rev
     |> priority_select_with_default ~default:(Signal.zero num_digits_bits)

@@ -49,9 +49,12 @@ let create
   let%hw newline_in = byte_in.valid &: (byte_in.value ==:& '\n') in
   let open Always in
   let%hw.State_machine sm = State_machine.create (module States) spec in
+  let%hw_var char_idx = Variable.reg spec ~width:char_idx_bits in
+  let%hw_var col_char_idx = Variable.reg spec ~width:char_idx_bits in
   let%hw_var col_idx = Variable.reg spec ~width:col_bits in
   let%hw_var row_idx = Variable.reg spec ~width:row_bits in
   let%hw.Bcd_number.Of_always bcd = Bcd_number.Of_always.reg spec in
+  let bcd_is_zero = Bcd_number.(Of_always.value bcd |> Of_signal.pack |> no_bits_set) in
   let%hw_var write_en = Variable.wire ~default:gnd () in
   let%hw_var uart_rx_ready = Variable.wire ~default:gnd () in
   let%hw.Column_entry.Of_signal column = Column_entry.Of_signal.wires () in
@@ -60,6 +63,7 @@ let create
       column
       ~idx:row_idx.value
       ~entry:{ With_valid.valid = vdd; value = Bcd_number.Of_always.value bcd }
+      ~offset:col_char_idx.value
   in
   Column_entry.Of_signal.assign
     column
@@ -85,25 +89,23 @@ let create
     [ sm.switch
         [ ( Shift_input_value
           , [ uart_rx_ready <-- vdd
+            ; when_ byte_in.valid [ incr char_idx ]
             ; when_
                 bcd_in.valid
                 [ Bcd_number.Of_always.assign
                     bcd
                     (Bcd_number.shift_in (Bcd_number.Of_always.value bcd) bcd_in.value)
+                ; when_ bcd_is_zero [ col_char_idx <-- char_idx.value ]
                 ]
             ; when_ operator_in.valid [ incr col_idx ]
-            ; if_
-                (space_in
-                 |: newline_in
-                 &: Bcd_number.(Of_always.value bcd |> Of_signal.pack |> any_bit_set))
-                [ sm.set_next Write_value ]
-              @@ elif newline_in [ incr row_idx; col_idx <--. 0 ]
+            ; if_ (space_in |: newline_in &: ~:bcd_is_zero) [ sm.set_next Write_value ]
+              @@ elif newline_in [ incr row_idx; col_idx <--. 0; char_idx <--. 0 ]
               @@ else_ []
             ; when_ end_of_input [ sm.set_next Done ]
             ] )
         ; ( Write_value
           , [ write_en <-- vdd
-            ; if_ (reg spec newline_in) [ incr row_idx; col_idx <--. 0 ]
+            ; if_ (reg spec newline_in) [ incr row_idx; col_idx <--. 0; char_idx <--. 0 ]
               @@ else_ [ incr col_idx ]
             ; sm.set_next Shift_input_value
             ; Bcd_number.(Of_always.assign bcd (zero ()))
@@ -122,10 +124,24 @@ let create
     in
     reg_fb spec ~width:60 ~enable:valid ~f:(fun x -> x +: uresize ~width:60 value)
   in
+  let part2_accumulator =
+    let%tydi { result = { valid; value } } =
+      Evaluate_operation_part2.hierarchical
+        scope
+        { clock; clear; column; operator = operator_in; operator_offset = char_idx.value }
+    in
+    reg_fb spec ~width:60 ~enable:valid ~f:(fun x -> x +: uresize ~width:60 value)
+  in
   let%tydi { uart_tx } =
     Print_decimal_outputs.hierarchical
       scope
-      { clock; clear; part1 = part1_accumulator; part2 = zero 60; done_; uart_tx_ready }
+      { clock
+      ; clear
+      ; part1 = part1_accumulator
+      ; part2 = part2_accumulator
+      ; done_
+      ; uart_tx_ready
+      }
   in
   { board_leds = uextend ~width:8 done_; uart_tx; uart_rx_ready = uart_rx_ready.value }
 ;;
