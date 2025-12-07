@@ -7,5 +7,6 @@ let solutions =
   ; (module Day01 : Solution.S)
   ; (module Day02 : Solution.S)
   ; (module Day03 : Solution.S)
+  ; (module Day06 : Solution.S)
   ]
 ;;

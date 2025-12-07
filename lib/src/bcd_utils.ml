@@ -13,6 +13,10 @@ let is_ascii_number x =
   x >=:. Char.to_int '0' &: (x <=:. Char.to_int '9')
 ;;
 
+let ascii_to_bcd_with_valid x =
+  { With_valid.value = ascii_to_bcd x; valid = is_ascii_number x }
+;;
+
 (* Convert a BCD value to binary, with a latency of one cycle per character *)
 let bcd_to_binary ~clock ~clear (x : _ With_valid.t) =
   assert (width x.value % 4 = 0);

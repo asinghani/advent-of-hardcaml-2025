@@ -14,4 +14,4 @@ module Cases = struct
   ;;
 end
 
-include Hardcaml.Enum.Make_binary (Cases)
+include Enum.Make_binary (Cases)
