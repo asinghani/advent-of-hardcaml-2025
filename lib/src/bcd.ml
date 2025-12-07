@@ -1,6 +1,7 @@
 open! Core
 open! Hardcaml
 open! Signal
+include Bcd_intf
 
 module Make (Config : sig
     val num_digits : int

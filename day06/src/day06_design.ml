@@ -11,95 +11,7 @@ let design_config =
   { Design_config.default with clock_freq; ulx3s_extra_synth_args = [ "-noflatten" ] }
 ;;
 
-let max_num_cols = 1024
-let max_num_digits = (* Maximum digits in each column *) 4
-let max_num_rows = 4
-let result_bits = 48
-let col_bits = address_bits_for max_num_cols
-let row_bits = address_bits_for max_num_rows
-
-module Bcd_number = Bcd.Make (struct
-    let num_digits = max_num_digits
-  end)
-
-module Evaluation_result_with_valid = With_valid.Vector (struct
-    let width = result_bits
-  end)
-
-(* Entry in RAM representing a single column of the input *)
-module Column_entry = struct
-  type 'a t = { numbers : 'a Bcd_number.With_valid.t list [@length max_num_rows] }
-  [@@deriving hardcaml]
-
-  let insert t ~idx ~entry =
-    { numbers =
-        List.mapi t.numbers ~f:(fun i x ->
-          Bcd_number.With_valid.Of_signal.(
-            mux2 (idx <:. i) (zero ()) @@ mux2 (idx ==:. i) entry @@ x))
-    }
-  ;;
-end
-
-module Evaluate_operation_part1 = struct
-  module I = struct
-    type 'a t =
-      { clock : 'a
-      ; clear : 'a
-      ; column : 'a Column_entry.t
-      ; operator : 'a Operator.With_valid.t
-      }
-    [@@deriving hardcaml]
-  end
-
-  module O = struct
-    type 'a t = { result : 'a Evaluation_result_with_valid.t } [@@deriving hardcaml]
-  end
-
-  let tree2 ~f =
-    tree ~arity:2 ~f:(function
-      | [ a; b ] -> f a b
-      | _ -> failwith "unreachable")
-  ;;
-
-  let create
-        _scope
-        ({ clock; clear; column; operator = { value = operator; valid } } : _ I.t)
-    : _ O.t
-    =
-    let spec = Reg_spec.create ~clock ~clear () in
-    let identity_bcd =
-      (* Identity element, for unused rows *)
-      Bcd_number.(Of_signal.mux2 (Operator.is_mul operator) (one ()) (zero ()))
-    in
-    let result =
-      column.numbers
-      |> List.map
-           ~f:
-             (Bcd_number.With_valid.value_with_default
-                (module Signal)
-                ~default:identity_bcd)
-      |> List.map ~f:(fun value -> { With_valid.value; valid })
-      |> List.map ~f:(Bcd_number.to_binary ~clock ~clear)
-      |> tree2
-         (* This is slightly sketchy since it relies on (but does not formally
-            codify) the fact that to_binary is a fixed-latency operation *)
-           ~f:(fun a b ->
-             With_valid.map_value2
-               (module Signal)
-               a
-               b
-               ~f:(fun a b -> Operator.to_op operator a b)
-             |> With_valid.map ~f:(reg spec))
-      |> With_valid.map_value ~f:(sel_bottom ~width:result_bits)
-    in
-    { result }
-  ;;
-
-  let hierarchical scope i =
-    let module Scoped = Hierarchy.In_scope (I) (O) in
-    Scoped.hierarchical ~name:"do_part1" ~scope create i
-  ;;
-end
+open Day06_utils
 
 module States = struct
   type t =
@@ -166,6 +78,9 @@ let create
        ()
      |> (Fn.flip Array.get) 0
      |> Column_entry.Of_signal.unpack);
+  (* This state-machine handles the parsing and buffering inputs into RAM
+     (col-by-col), the actual computations happen in
+     [Evaluate_operation_part{1,2}] modules. *)
   compile
     [ sm.switch
         [ ( Shift_input_value
@@ -194,7 +109,7 @@ let create
             ; Bcd_number.(Of_always.assign bcd (zero ()))
             ] )
         ; ( Flush_pipeline
-          , [ Fsm_utils.after_n_clocks ~clock ~clear ~n:10 [ sm.set_next Done ] ] )
+          , [ Fsm_utils.after_n_clocks ~clock ~clear ~n:30 [ sm.set_next Done ] ] )
         ; Done, []
         ]
     ];
