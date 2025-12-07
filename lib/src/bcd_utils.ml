@@ -13,6 +13,7 @@ let is_ascii_number x =
   x >=:. Char.to_int '0' &: (x <=:. Char.to_int '9')
 ;;
 
+(* Convert a BCD value to binary, with a latency of one cycle per character *)
 let bcd_to_binary ~clock ~clear (x : _ With_valid.t) =
   assert (width x.value % 4 = 0);
   let spec = Reg_spec.create ~clock ~clear () in
