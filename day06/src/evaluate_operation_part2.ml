@@ -47,7 +47,7 @@ let create
     (* Identity element, for unused rows *)
     Bcd_number.(Of_signal.mux2 (Operator.is_mul operator) (one ()) (zero ()))
   in
-  let%hw_list.Bcd_number.With_valid.Of_signal numbers_aligned =
+  let%hw_list.Bcd_number.Of_signal numbers_aligned =
     List.map2_exn column.numbers column.offsets ~f:(fun num offs ->
       let%hw num_digits = Bcd_number.num_digits num.value in
       let%hw padding_msbs = Unsigned.(offs -: operator_offset) in
@@ -57,23 +57,43 @@ let create
           -: (num_digits +: padding_msbs))
         |> sel_bottom ~width:offset_bits
       in
-      Bcd_number.With_valid.Of_signal.mux
+      Bcd_number.Of_signal.mux
         padding_lsbs
         (List.init max_num_digits ~f:(fun i ->
            let digits =
              List.take
                (List.init i ~f:(fun _ -> zero 4) @ num.value.digits)
                max_num_digits
+             |> List.map ~f:(fun x -> mux2 num.valid x @@ zero 4)
            in
-           { With_valid.valid = num.valid; value = { Bcd_number.digits } })))
+           { Bcd_number.digits })))
+  in
+  let%hw_list.Bcd_number.Of_signal numbers_transpose =
+    numbers_aligned
+    |> List.map ~f:(fun { digits } -> digits)
+    |> List.transpose_exn
+    |> List.map ~f:(fun digits -> { Bcd_number.digits = List.rev digits })
+  in
+  let%hw_list.Bcd_number.Of_signal numbers_shifted =
+    numbers_transpose
+    |> List.map ~f:(fun num ->
+      List.init max_num_digits ~f:(fun i ->
+        let i = i + 1 in
+        let trailing_digits_are_zero =
+          List.slice num.digits 0 i |> List.map ~f:no_bits_set |> reduce ~f:( &: )
+        in
+        { With_valid.valid = trailing_digits_are_zero
+        ; value =
+            (if i = max_num_digits
+             then identity_bcd
+             else
+               { digits = List.slice num.digits i 0 @ List.init i ~f:(fun _ -> zero 4) })
+        })
+      |> List.rev
+      |> Bcd_number.Of_signal.priority_select_with_default ~default:num)
   in
   let result =
-    numbers_aligned
-    |> List.map
-         ~f:
-           (Bcd_number.With_valid.value_with_default
-              (module Signal)
-              ~default:identity_bcd)
+    numbers_shifted
     |> List.map ~f:(fun value -> { With_valid.value; valid })
     |> List.map ~f:(Bcd_number.to_binary ~clock ~clear)
     |> tree2

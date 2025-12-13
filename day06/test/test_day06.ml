@@ -11,6 +11,8 @@ let%expect_test "test day06" =
     {|
     === Output ===
     Part 1: 4277556
-    Part 2:
+    Part 2: 3263827
+
+    Saved waves to ./test_harness_ml_test_day06.vcd
     |}]
 ;;
