@@ -1,0 +1,12 @@
+(library
+ (name advent_of_fpga_utils_test)
+ (libraries
+  advent_of_fpga_kernel
+  advent_of_fpga_utils
+  core
+  hardcaml
+  hardcaml_circuits
+  hardcaml_test_harness)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane)))
