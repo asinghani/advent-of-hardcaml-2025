@@ -10,5 +10,8 @@ let%expect_test "test day12" =
     (module Day12);
   [%expect
     {|
+    === Output ===
+    Part 1: 437
+    Part 2:
     |}]
 ;;
