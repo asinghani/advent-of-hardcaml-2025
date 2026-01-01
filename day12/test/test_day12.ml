@@ -8,8 +8,7 @@ let%expect_test "test day12" =
     ~input_filename:"day12.txt"
       (* For day 12, the sample input is not representative of the real one *)
     (module Day12);
-  [%expect
-    {|
+  [%expect {|
     === Output ===
     Part 1: 437
     Part 2:

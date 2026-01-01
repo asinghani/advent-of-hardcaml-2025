@@ -104,7 +104,8 @@ module Make_harness (Design : Design.S) (Parser : Parser.S) = struct
     let waves_config =
       if save_waves
       then
-        Waves_config.to_test_directory () |> Waves_config.as_wavefile_format ~format:Vcd
+        Waves_config.to_home_subdirectory ~subdirectory:"temp" ()
+        |> Waves_config.as_wavefile_format ~format:Vcd
       else Waves_config.no_waves
     in
     Harness.run_advanced
@@ -137,11 +138,11 @@ module Make_harness (Design : Design.S) (Parser : Parser.S) = struct
 end
 
 let run_combined_exn
-      ?debug
-      ?save_waves
-      ~num_cycles
-      ~input_filename
-      (module Solution : Solution.S)
+  ?debug
+  ?save_waves
+  ~num_cycles
+  ~input_filename
+  (module Solution : Solution.S)
   =
   let module Design =
     (val match Solution.design with
@@ -160,11 +161,11 @@ let run_combined_exn
 ;;
 
 let run_part1_exn
-      ?debug
-      ?save_waves
-      ~num_cycles
-      ~input_filename
-      (module Solution : Solution.S)
+  ?debug
+  ?save_waves
+  ~num_cycles
+  ~input_filename
+  (module Solution : Solution.S)
   =
   let module Design =
     (val match Solution.design with
@@ -182,11 +183,11 @@ let run_part1_exn
 ;;
 
 let run_part2_exn
-      ?debug
-      ?save_waves
-      ~num_cycles
-      ~input_filename
-      (module Solution : Solution.S)
+  ?debug
+  ?save_waves
+  ~num_cycles
+  ~input_filename
+  (module Solution : Solution.S)
   =
   let module Design =
     (val match Solution.design with

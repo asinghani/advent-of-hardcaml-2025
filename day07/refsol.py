@@ -20,7 +20,7 @@ cnt1 = 0
 cnt2 = 0
 
 for idx, line in enumerate(dat):
-    is_last_row = (idx == (len(dat) - 1))
+    is_last_row = (idx == width - 1)
     for i, x in enumerate("." + line + "."):
         window = window[1:] + [x]
 
@@ -30,7 +30,7 @@ for idx, line in enumerate(dat):
         if window[1] == "^":
             tmp = 0
         elif window[1] == "S":
-            tmp += 1
+            tmp = 1
         else:
             tmp = count_shreg[1]
 
@@ -45,6 +45,8 @@ for idx, line in enumerate(dat):
 
         if is_last_row:
             cnt2 += tmp
+
+        print(is_last_row, tmp)
 
         count_shreg = count_shreg[1:] + [tmp]
 
