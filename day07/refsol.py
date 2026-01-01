@@ -7,40 +7,45 @@ with open(sys.argv[1]) as f:
 
 width = len(dat[0])
 
-last = ["." for x in range(width)]
-cur = ["." for x in range(width)]
+window = ["." for x in range(3)]
+count_shreg = [0 for x in range(width+1)]
 
-cnt = 0
+def get(arr, i, default=None):
+    if i < 0 or i >= len(arr):
+        return default
+    else:
+        return arr[i]
 
-for line in dat:
-    for i in range(width):
-        out = "."
-        if line[i] == "^":
-            out = "^"
+cnt1 = 0
+cnt2 = 0
 
-            if last[i] == "|":
-                cnt += 1
+for idx, line in enumerate(dat):
+    is_last_row = (idx == (len(dat) - 1))
+    for i, x in enumerate("." + line + "."):
+        window = window[1:] + [x]
 
-        elif line[i] == "S":
-            out = "S"
+        if i < 2:
+            continue
 
-        elif line[i] == ".":
-            out = "."
-
-            if last[i] == "S":
-                out = "|"
-            elif last[i] == "|":
-                out = "|"
-            elif i > 0 and last[i-1] == "|" and line[i-1] == "^":
-                out = "|"
-            elif i < (width-1) and last[i+1] == "|" and line[i+1] == "^":
-                out = "|"
-
+        if window[1] == "^":
+            tmp = 0
+        elif window[1] == "S":
+            tmp += 1
         else:
-            assert False
+            tmp = count_shreg[1]
 
-        cur[i] = out
+        if window[0] == "^":
+            tmp += count_shreg[0]
 
-    last = copy.deepcopy(cur)
+        if window[2] == "^":
+            tmp += count_shreg[2]
 
-print(cnt)
+        if window[1] == "^" and count_shreg[1] != 0:
+            cnt1 += 1
+
+        if is_last_row:
+            cnt2 += tmp
+
+        count_shreg = count_shreg[1:] + [tmp]
+
+print(cnt1, cnt2)
